@@ -24,11 +24,15 @@ const GAME_STATE = {
     SETTINGS: 1,
     PLAYING: 2,
     GAME_OVER: 3,
-    PAUSED: 4
+    PAUSED: 4,
+    LOADING: 5
 };
 
 let currentGameState = GAME_STATE.START_SCREEN;
 let previousGameState = null; // 일시정지 전 상태를 저장하기 위한 변수
+let loadingStartTime = 0; // 로딩 시작 시간
+let loadingMinDuration = 500; // 최소 로딩 시간 (0.5초)
+let chunksLoaded = false; // 청크 로딩 완료 여부
 
 // Available player colors and settings
 const playerColors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'pink'];
@@ -50,6 +54,13 @@ const player = {
     weapons: [],
     color: playerColors[0] // Default color
 };
+
+// 적 스폰 관련 변수 추가
+const MAX_ENEMIES = 50; // 최대 적 수
+const MIN_SPAWN_DISTANCE = 550; // 최소 스폰 거리
+const MAX_SPAWN_DISTANCE = 650; // 최대 스폰 거리
+const ENEMY_SPAWN_INTERVAL = 1000; // 적 스폰 간격 (1초)
+let lastEnemySpawnTime = 0; // 마지막 적 스폰 시간
 
 // Get HUD elements
 const healthElement = document.getElementById('health');
@@ -107,8 +118,8 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         } else if (e.key === 'Enter') {
             if (selectedMenuOption === 0) {
-                // Start the game
-                currentGameState = GAME_STATE.PLAYING;
+                // Start the game with Loading Screen
+                startGame();
             } else if (selectedMenuOption === 1) {
                 // Go to settings
                 currentGameState = GAME_STATE.SETTINGS;
@@ -207,6 +218,47 @@ function drawPauseScreen() {
     ctx.fillText('ESC or ENTER', canvas.width / 2, canvas.height / 2 + 50);
 }
 
+// 로딩 화면 그리기 함수
+function drawLoadingScreen() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 로딩 텍스트
+    ctx.fillStyle = '#66fcf1';
+    ctx.font = '36px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('로딩 중...', canvas.width / 2, canvas.height / 2 - 20);
+    
+    // 로딩 바 배경
+    ctx.fillStyle = '#333';
+    ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 20, 200, 20);
+    
+    // 로딩 진행 표시 (시간 기반으로 애니메이션)
+    const elapsedTime = Date.now() - loadingStartTime;
+    const progress = Math.min(elapsedTime / loadingMinDuration, 1);
+    
+    ctx.fillStyle = '#66fcf1';
+    ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 20, 200 * progress, 20);
+}
+
+// startGame 함수 수정 - 로딩 상태로 전환
+function startGame() {
+    // 로딩 상태로 변경
+    currentGameState = GAME_STATE.LOADING;
+    loadingStartTime = Date.now();
+    chunksLoaded = false;
+    
+    // 게임 초기화
+    resetGame();
+    
+    // 비동기적으로 청크 생성
+    setTimeout(() => {
+        // 플레이어 주변 청크 생성
+        generateChunksAroundPlayer();
+        chunksLoaded = true;
+    }, 10); // 약간의 딜레이를 주어 UI 스레드가 로딩 화면을 그릴 수 있게 함
+}
+
 // Removed mouse event listeners to only use keyboard controls
 // Instead, add automatic aiming toward the nearest enemy
 function updatePlayerAim() {
@@ -224,7 +276,7 @@ function updatePlayerAim() {
 
 function findNearestEnemy() {
     let nearestEnemy = null;
-    let minDistance = Infinity;
+    let minDistance = 250;
     
     enemies.forEach((enemy) => {
         const dx = enemy.x - player.x;
@@ -260,7 +312,7 @@ let lastFrameTime = 0;
 const TARGET_FPS = 120;
 const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-// Game Loop 수정
+// Game Loop 수정 - 로딩 상태 처리 추가
 function gameLoop(timestamp) {
     // Calculate delta time and limit frame rate
     if (!lastFrameTime) lastFrameTime = timestamp;
@@ -274,15 +326,26 @@ function gameLoop(timestamp) {
         if (currentGameState !== lastGameState) {
             if (currentGameState === GAME_STATE.PLAYING) {
                 document.getElementById('hud').style.display = 'flex';
-            } else if (currentGameState !== GAME_STATE.PAUSED) {
-                // 일시정지 상태에서는 HUD를 계속 표시
+            } else if (currentGameState !== GAME_STATE.PAUSED && currentGameState !== GAME_STATE.LOADING) {
+                // 일시정지 상태와 로딩 상태에서는 HUD를 계속 표시
                 document.getElementById('hud').style.display = 'none';
             }
             lastGameState = currentGameState;
         }
         
+        // 로딩 상태 처리
+        if (currentGameState === GAME_STATE.LOADING) {
+            drawLoadingScreen();
+            
+            // 청크 로딩이 완료되고 최소 로딩 시간이 지났는지 확인
+            const elapsedTime = Date.now() - loadingStartTime;
+            if (chunksLoaded && elapsedTime >= loadingMinDuration) {
+                // 로딩 완료, 게임 플레이 상태로 전환
+                currentGameState = GAME_STATE.PLAYING;
+            }
+        }
         // Update game based on state
-        if (currentGameState === GAME_STATE.PLAYING) {
+        else if (currentGameState === GAME_STATE.PLAYING) {
             update();
             draw();
             if (player.health <= 0) {
@@ -401,6 +464,7 @@ let lastLevel = player.level;
 let lastScore = score;
 let lastExp = player.exp;
 
+// update 함수를 수정합니다 - 플레이어 움직임과 상관없이 항상 자동 조준 업데이트
 function update() {
     // Move Player
     let playerMoved = false;
@@ -409,14 +473,16 @@ function update() {
     if (keys['ArrowLeft']) { player.x -= player.speed; playerMoved = true; }
     if (keys['ArrowRight']) { player.x += player.speed; playerMoved = true; }
     
-    // Only update player aim and generate chunks if player has moved
+    // 플레이어가 움직였을 때만 청크를 생성
     if (playerMoved) {
-        // Update player aim toward nearest enemy
-        updatePlayerAim();
-        
         // Generate chunks around the player
         generateChunksAroundPlayer();
     }
+    // 적 스폰 로직 실행
+    spawnEnemyAroundPlayer();
+    
+    // 플레이어 움직임과 상관없이 항상 가장 가까운 적을 조준
+    updatePlayerAim();
     
     // Auto-fire at the nearest enemy (no spacebar needed)
     autoFireAtNearestEnemy();
@@ -433,7 +499,19 @@ function update() {
             bullets.splice(i, 1);
         }
     }
-
+    
+    // 화면 밖으로 너무 멀리 벗어난 적은 제거 (최적화)
+    const despawnDistance = MAX_SPAWN_DISTANCE * 2; // 스폰 거리의 2배 이상 떨어지면 제거
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        const distanceSquared = dx * dx + dy * dy;
+        
+        if (distanceSquared > despawnDistance * despawnDistance) {
+            enemies.splice(i, 1);
+        }
+    }
     const activeRadius = CHUNK_SIZE * 1.5;
 
     // Update Enemies - only process enemies within active radius
@@ -600,24 +678,15 @@ function generateChunksAroundPlayer() {
     }
 }
 
+// generateChunk 함수 수정
 function generateChunk(chunkX, chunkY) {
     const chunk = {
-        enemies: [],
         items: [],
         terrain: [],
     };
 
-    const chunkSeed = chunkX * 100000 + chunkY;
-
-    // Generate enemies
-    const enemyCount = 5; // Adjust as needed
-    for (let i = 0; i < enemyCount; i++) {
-        const x = chunkX * CHUNK_SIZE + Math.random() * CHUNK_SIZE;
-        const y = chunkY * CHUNK_SIZE + Math.random() * CHUNK_SIZE;
-        const enemy = new Enemy(x, y, 20, 1 + Math.random() * 0.5, 5, 10);
-        chunk.enemies.push(enemy);
-        enemies.push(enemy); // Add to the main enemies array
-    }
+    // 적은 더 이상 청크 생성 시 스폰되지 않음
+    // 대신 spawnEnemyAroundPlayer 함수를 통해 지속적으로 생성됨
 
     // Generate items (jewels)
     const itemCount = 3; // Adjust as needed
@@ -647,14 +716,11 @@ function generateChunk(chunkX, chunkY) {
     chunks[chunkKey] = chunk;
 }
 
+// unloadChunk 함수 수정 - enemies 관련 부분 제거
 function unloadChunk(chunkKey) {
     const chunk = chunks[chunkKey];
     if (chunk) {
-        // Remove enemies
-        chunk.enemies.forEach((enemy) => {
-            const index = enemies.indexOf(enemy);
-            if (index !== -1) enemies.splice(index, 1);
-        });
+        // 청크 언로드 시 적은 제거하지 않음 (플레이어 중심으로 관리하기 때문)
 
         // Remove items
         chunk.items.forEach((item) => {
@@ -672,6 +738,41 @@ function unloadChunk(chunkKey) {
         delete chunks[chunkKey];
     }
 }
+
+// 플레이어 주변에 적을 스폰하는 함수
+function spawnEnemyAroundPlayer() {
+    // 최대 적 수를 초과하지 않았는지 확인
+    if (enemies.length >= MAX_ENEMIES) {
+        return;
+    }
+    
+    // 스폰 간격 확인
+    const currentTime = Date.now();
+    if (currentTime - lastEnemySpawnTime < ENEMY_SPAWN_INTERVAL) {
+        return;
+    }
+    
+    // 플레이어 주변 랜덤 위치 계산 (550~650 거리)
+    const spawnDistance = MIN_SPAWN_DISTANCE + Math.random() * (MAX_SPAWN_DISTANCE - MIN_SPAWN_DISTANCE);
+    const spawnAngle = Math.random() * Math.PI * 2; // 0~360도 랜덤 각도
+    
+    const spawnX = player.x + Math.cos(spawnAngle) * spawnDistance;
+    const spawnY = player.y + Math.sin(spawnAngle) * spawnDistance;
+    
+    // 적 생성 (레벨에 따라 강해지도록 설정)
+    const enemySize = 20;
+    const enemySpeed = 1 + Math.random() * 0.5 + (player.level - 1) * 0.1; // 레벨에 따라 속도 증가
+    const enemyHealth = 5 + Math.floor((player.level - 1) * 1.5); // 레벨에 따라 체력 증가
+    const enemyAttack = 10 + Math.floor((player.level - 1) * 0.5); // 레벨에 따라 공격력 증가
+    
+    // 새 적 객체 생성
+    const enemy = new Enemy(spawnX, spawnY, enemySize, enemySpeed, enemyHealth, enemyAttack);
+    enemies.push(enemy);
+    
+    // 마지막 스폰 시간 업데이트
+    lastEnemySpawnTime = currentTime;
+}
+
 
 function detectCollision(obj1, obj2) {
     const dx = obj1.x - obj2.x;
@@ -703,6 +804,7 @@ function fireWeapon() {
     }
 }
 
+// resetGame 함수 수정 - 직접 게임 상태를 변경하지 않도록
 function resetGame() {
     player.x = 0;
     player.y = 0;
@@ -725,8 +827,7 @@ function resetGame() {
     scoreElement.textContent = `Score: ${score}`;
     expElement.textContent = `EXP: ${player.exp} / ${player.nextLevelExp}`;
     
-    // Set game state to playing
-    currentGameState = GAME_STATE.PLAYING;
+    // 게임 상태 변경은 호출하는 함수에서 처리
 }
 
 function restartGame() {
