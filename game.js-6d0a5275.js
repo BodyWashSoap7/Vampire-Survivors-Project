@@ -52,7 +52,8 @@ const player = {
     nextLevelExp: 100,
     prevLevelExp: 0,
     weapons: [],
-    color: playerColors[0] // Default color
+    color: playerColors[0], // Default color
+    image: new Image() // 이미지 객체 추가
 };
 
 // 적 스폰 관련 변수 추가
@@ -240,6 +241,14 @@ function drawLoadingScreen() {
     ctx.fillStyle = '#66fcf1';
     ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 20, 200 * progress, 20);
 }
+
+// 이미지 리소스 로딩
+const playerImage = new Image();
+playerImage.src = 'player.png'; // 사용할 플레이어 이미지 경로
+playerImage.onload = function() {
+    player.image = playerImage;
+    console.log('Player image loaded');
+};
 
 // startGame 함수 수정 - 로딩 상태로 전환
 function startGame() {
@@ -600,10 +609,34 @@ function draw() {
     });
 
     // Draw Player at the center of the canvas with selected color
-    ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2, player.size, 0, Math.PI * 2);
-    ctx.fill();
+    if (player.image && player.image.complete) {
+        // 이미지가 로드된 경우 이미지 그리기
+        const playerSize = player.size * 2; // 이미지 크기 조정
+        ctx.drawImage(
+            player.image,
+            canvas.width / 2 - playerSize,
+            canvas.height / 2 - playerSize,
+            playerSize * 2,
+            playerSize * 2
+        );
+        
+        // 색상 티핑 효과 (이미지에 선택된 색상 효과 적용)
+        ctx.globalCompositeOperation = 'color';
+        ctx.fillStyle = player.color;
+        ctx.fillRect(
+            canvas.width / 2 - playerSize,
+            canvas.height / 2 - playerSize,
+            playerSize * 2,
+            playerSize * 2
+        );
+        ctx.globalCompositeOperation = 'source-over'; // 원래 모드로 복구
+    } else {
+        // 이미지가 로드되지 않은 경우 기존 원 그리기 (대체용)
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, player.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
     
     // Draw player direction indicator
     if (player.aimAngle !== undefined) {
