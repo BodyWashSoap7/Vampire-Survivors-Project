@@ -34,12 +34,14 @@ let loadingStartTime = 0; // 로딩 시작 시간
 let loadingMinDuration = 500; // 최소 로딩 시간 (0.5초)
 let chunksLoaded = false; // 청크 로딩 완료 여부
 
+
 // Available player colors and settings
-const playerColors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'pink'];
+//const playerColors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'pink'];
 let currentColorIndex = 0;
 let selectedMenuOption = 0; // 0 = Start Game, 1 = Settings
 
 // Player object
+// 플레이어 객체 수정 - 색상 대신 캐릭터 타입 사용
 const player = {
     x: 0,
     y: 0,
@@ -52,9 +54,39 @@ const player = {
     nextLevelExp: 100,
     prevLevelExp: 0,
     weapons: [],
-    color: playerColors[0], // Default color
-    image: new Image() // 이미지 객체 추가
+    characterType: 1, // 기본 캐릭터 (1, 2, 3 중 하나)
+    image: null     // 이미지 객체는 선택에 따라 할당됨
 };
+
+// 플레이어 캐릭터 이미지 배열 생성 (색상 배열 대체)
+const playerImages = [
+    { name: '캐릭터 1', image: new Image() },
+    { name: '캐릭터 2', image: new Image() },
+    { name: '캐릭터 3', image: new Image() }
+];
+
+// 선택된 캐릭터 인덱스 (0, 1, 2 중 하나)
+let currentCharacterIndex = 0;
+
+// 이미지 리소스 로딩 - 3개의 캐릭터 이미지 로드
+function loadCharacterImages() {
+    playerImages[0].image.src = 'player1.png';
+    playerImages[1].image.src = 'player2.png';
+    playerImages[2].image.src = 'player3.png';
+    
+    // 첫 번째 캐릭터로 기본 설정
+    player.image = playerImages[0].image;
+    
+    // 이미지 로드 확인용 로그
+    playerImages.forEach((character, index) => {
+        character.image.onload = function() {
+            console.log(`캐릭터 ${index + 1} 이미지 로드 완료`);
+        };
+    });
+}
+
+// 게임 초기화 시 이미지 로딩 호출
+loadCharacterImages();
 
 // 적 스폰 관련 변수 추가
 const MAX_ENEMIES = 50; // 최대 적 수
@@ -105,53 +137,57 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// Event Listeners for Key Presses
+// 키보드 이벤트 핸들러 수정 (설정 화면에서 좌우 화살표로 캐릭터 선택)
 document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
     
-    // Handle menu navigation with arrow keys
+    // 시작 화면 메뉴 네비게이션
     if (currentGameState === GAME_STATE.START_SCREEN) {
         if (e.key === 'ArrowUp') {
-            selectedMenuOption = 0; // Start Game
+            selectedMenuOption = 0; // 게임 시작
             e.preventDefault();
         } else if (e.key === 'ArrowDown') {
-            selectedMenuOption = 1; // Settings
+            selectedMenuOption = 1; // 설정
             e.preventDefault();
         } else if (e.key === 'Enter') {
             if (selectedMenuOption === 0) {
-                // Start the game with Loading Screen
+                // 로딩 화면으로 게임 시작
                 startGame();
             } else if (selectedMenuOption === 1) {
-                // Go to settings
+                // 설정 화면으로 이동
                 currentGameState = GAME_STATE.SETTINGS;
             }
             e.preventDefault();
         }
     } 
-    // Handle settings navigation
+    // 설정 화면 네비게이션 수정 - 색상 대신 캐릭터 선택
     else if (currentGameState === GAME_STATE.SETTINGS) {
         if (e.key === 'ArrowLeft') {
-            currentColorIndex = (currentColorIndex - 1 + playerColors.length) % playerColors.length;
-            player.color = playerColors[currentColorIndex];
+            // 이전 캐릭터로
+            currentCharacterIndex = (currentCharacterIndex - 1 + playerImages.length) % playerImages.length;
+            player.characterType = currentCharacterIndex + 1; // 1, 2, 3 값 저장
+            player.image = playerImages[currentCharacterIndex].image;
             e.preventDefault();
         } else if (e.key === 'ArrowRight') {
-            currentColorIndex = (currentColorIndex + 1) % playerColors.length;
-            player.color = playerColors[currentColorIndex];
+            // 다음 캐릭터로
+            currentCharacterIndex = (currentCharacterIndex + 1) % playerImages.length;
+            player.characterType = currentCharacterIndex + 1; // 1, 2, 3 값 저장
+            player.image = playerImages[currentCharacterIndex].image;
             e.preventDefault();
         } else if (e.key === 'Enter' || e.key === 'Escape') {
-            // Return to start screen
+            // 시작 화면으로 돌아가기
             currentGameState = GAME_STATE.START_SCREEN;
             e.preventDefault();
         }
     }
-    // 게임 중 ESC 키를 눌렀을 때 일시정지 처리
+    
+    // 나머지 키 이벤트 처리 (이전 코드와 동일)
     if (e.key === 'Escape') {
         if (currentGameState === GAME_STATE.PLAYING) {
             pauseGame();
         } else if (currentGameState === GAME_STATE.PAUSED) {
             resumeGame();
         } else if (currentGameState === GAME_STATE.SETTINGS) {
-            // 설정 화면에서는 시작 화면으로 돌아가기
             currentGameState = GAME_STATE.START_SCREEN;
         }
         e.preventDefault();
@@ -163,7 +199,7 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         }
     }
-    // Handle game over screen
+    // 게임 오버 화면에서 키 처리
     else if (currentGameState === GAME_STATE.GAME_OVER) {
         if (e.key === 'Enter') {
             restartGame();
@@ -171,7 +207,7 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // Prevent default scrolling behavior for game controls
+    // 스크롤 방지
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'Escape'].includes(e.key)) {
         e.preventDefault();
     }
@@ -417,53 +453,61 @@ function drawStartScreen() {
     ctx.fillText('방향키로 선택하고 Enter를 눌러 확인하세요', canvas.width / 2, canvas.height * 3/4);
 }
 
-// Draw Settings Screen
+// 설정 화면 그리기 함수 수정 - 색상 선택에서 캐릭터 선택으로 변경
 function drawSettingsScreen() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Title
+    // 제목
     ctx.fillStyle = '#55AAFF';
     ctx.font = '36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('캐릭터 설정', canvas.width / 2, canvas.height / 3);
+    ctx.fillText('캐릭터 선택', canvas.width / 2, canvas.height / 3);
     
-    // Color selection
+    // 캐릭터 선택 텍스트
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '24px Arial';
-    ctx.fillText('캐릭터 색상:', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillText('캐릭터:', canvas.width / 2, canvas.height / 2 - 70);
     
-    // Draw color options
-    const colorBoxSize = 30;
-    const totalWidth = playerColors.length * (colorBoxSize + 10) - 10;
-    let startX = (canvas.width - totalWidth) / 2;
+    // 현재 선택된 캐릭터 이름 표시
+    ctx.fillStyle = '#FFFF00';
+    ctx.fillText(playerImages[currentCharacterIndex].name, canvas.width / 2, canvas.height / 2 - 30);
     
-    for (let i = 0; i < playerColors.length; i++) {
-        // Draw color box
-        ctx.fillStyle = playerColors[i];
-        ctx.fillRect(startX, canvas.height / 2 - 10, colorBoxSize, colorBoxSize);
-        
-        // Draw selection indicator
-        if (i === currentColorIndex) {
-            ctx.strokeStyle = '#FFFF00';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(startX - 3, canvas.height / 2 - 13, colorBoxSize + 6, colorBoxSize + 6);
-        }
-        
-        startX += colorBoxSize + 10;
+    // 좌우 화살표 그리기
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '32px Arial';
+    ctx.fillText('◀', canvas.width / 2 - 120, canvas.height / 2 + 70);
+    ctx.fillText('▶', canvas.width / 2 + 120, canvas.height / 2 + 70);
+    
+    // 캐릭터 이미지 미리보기
+    const previewSize = player.size * 4;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2 + 50;
+    
+    // 현재 선택된 캐릭터 이미지 그리기
+    if (playerImages[currentCharacterIndex].image.complete) {
+        ctx.drawImage(
+            playerImages[currentCharacterIndex].image,
+            centerX - previewSize,
+            centerY - previewSize,
+            previewSize * 2,
+            previewSize * 2
+        );
+    } else {
+        // 이미지가 로드되지 않은 경우 대체 표시
+        ctx.fillStyle = '#AAAAAA';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, previewSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('로딩 중...', centerX, centerY);
     }
     
-    // Preview character
-    ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height / 2 + 70, player.size * 2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Instructions
+    // 안내 메시지
     ctx.fillStyle = '#AAAAAA';
     ctx.font = '16px Arial';
-    ctx.fillText('좌우 방향키로 색상을 선택하고 Enter를 눌러 저장하세요', canvas.width / 2, canvas.height * 3/4);
-    ctx.fillText('Enter 또는 Escape를 눌러 메인 메뉴로 돌아가세요', canvas.width / 2, canvas.height * 3/4 + 30);
+    ctx.fillText('좌우 방향키로 캐릭터를 선택하고 Enter를 눌러 저장하세요', canvas.width / 2, canvas.height * 3/4 + 20);
+    ctx.fillText('Enter 또는 Escape를 눌러 메인 메뉴로 돌아가세요', canvas.width / 2, canvas.height * 3/4 + 50);
 }
 
 // Update Game State
@@ -608,10 +652,16 @@ function draw() {
         bullet.draw(offsetX, offsetY);
     });
 
-    // Draw Player at the center of the canvas with selected color
+    // 플레이어 그리기 (색상 적용 대신 선택된 캐릭터 이미지 사용)
     if (player.image && player.image.complete) {
         // 이미지가 로드된 경우 이미지 그리기
         const playerSize = player.size * 2; // 이미지 크기 조정
+        
+        // 상태 저장
+        ctx.save();
+        
+        // 투명도를 유지하며 이미지 그리기
+        ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(
             player.image,
             canvas.width / 2 - playerSize,
@@ -620,25 +670,17 @@ function draw() {
             playerSize * 2
         );
         
-        // 색상 티핑 효과 (이미지에 선택된 색상 효과 적용)
-        ctx.globalCompositeOperation = 'color';
-        ctx.fillStyle = player.color;
-        ctx.fillRect(
-            canvas.width / 2 - playerSize,
-            canvas.height / 2 - playerSize,
-            playerSize * 2,
-            playerSize * 2
-        );
-        ctx.globalCompositeOperation = 'source-over'; // 원래 모드로 복구
+        // 상태 복원
+        ctx.restore();
     } else {
         // 이미지가 로드되지 않은 경우 기존 원 그리기 (대체용)
-        ctx.fillStyle = player.color;
+        ctx.fillStyle = 'white'; // 기본 흰색 사용
         ctx.beginPath();
         ctx.arc(canvas.width / 2, canvas.height / 2, player.size, 0, Math.PI * 2);
         ctx.fill();
     }
     
-    // Draw player direction indicator
+    // 플레이어 방향 표시기 그리기 (이전과 동일)
     if (player.aimAngle !== undefined) {
         const indicatorLength = player.size * 1.2;
         ctx.strokeStyle = 'cyan';
@@ -837,7 +879,7 @@ function fireWeapon() {
     }
 }
 
-// resetGame 함수 수정 - 직접 게임 상태를 변경하지 않도록
+// resetGame 함수 수정 - 색상 대신 캐릭터 타입 유지
 function resetGame() {
     player.x = 0;
     player.y = 0;
@@ -847,6 +889,7 @@ function resetGame() {
     player.nextLevelExp = 100;
     player.prevLevelExp = 0;
     player.weapons = [new BasicWeapon()];
+    // characterType과 image는 그대로 유지 (캐릭터 선택 유지)
     bullets = [];
     enemies = [];
     jewels = [];
@@ -854,7 +897,7 @@ function resetGame() {
     chunks = {};
     score = 0;
 
-    // Update HUD
+    // HUD 업데이트
     healthElement.textContent = `Health: ${player.health}`;
     levelElement.textContent = `Level: ${player.level}`;
     scoreElement.textContent = `Score: ${score}`;
