@@ -278,14 +278,6 @@ function drawLoadingScreen() {
     ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 20, 200 * progress, 20);
 }
 
-// 이미지 리소스 로딩
-const playerImage = new Image();
-playerImage.src = 'player.png'; // 사용할 플레이어 이미지 경로
-playerImage.onload = function() {
-    player.image = playerImage;
-    console.log('Player image loaded');
-};
-
 // startGame 함수 수정 - 로딩 상태로 전환
 function startGame() {
     // 로딩 상태로 변경
