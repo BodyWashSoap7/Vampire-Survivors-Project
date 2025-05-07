@@ -35,10 +35,11 @@ let loadingMinDuration = 500; // 최소 로딩 시간 (0.5초)
 let chunksLoaded = false; // 청크 로딩 완료 여부
 
 
-// Available player colors and settings
-//const playerColors = ['white', 'cyan', 'lime', 'yellow', 'orange', 'pink'];
-let currentColorIndex = 0;
+// Start menu options
 let selectedMenuOption = 0; // 0 = Start Game, 1 = Settings
+
+// Pause menu options
+let selectedPauseOption = 0; // 0 = Resume Game, 1 = To the Start Menu
 
 // Player object
 // 플레이어 객체 수정 - 색상 대신 캐릭터 타입 사용
@@ -137,9 +138,12 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 키보드 이벤트 핸들러 수정 (설정 화면에서 좌우 화살표로 캐릭터 선택)
+// 키보드 이벤트 핸들러
 document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
+    
+    // 디버깅을 위한 콘솔 로그 추가
+    console.log('키 입력:', e.key, '현재 게임 상태:', currentGameState);
     
     // 시작 화면 메뉴 네비게이션
     if (currentGameState === GAME_STATE.START_SCREEN) {
@@ -160,7 +164,7 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         }
     } 
-    // 설정 화면 네비게이션 수정 - 색상 대신 캐릭터 선택
+    // 설정 화면 네비게이션
     else if (currentGameState === GAME_STATE.SETTINGS) {
         if (e.key === 'ArrowLeft') {
             // 이전 캐릭터로
@@ -180,8 +184,27 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         }
     }
+    // 일시정지 화면 네비게이션 추가
+    else if (currentGameState === GAME_STATE.PAUSED) {
+        if (e.key === 'ArrowUp') {
+            selectedPauseOption = 0;
+            e.preventDefault();
+        } else if (e.key === 'ArrowDown') {
+            selectedPauseOption = 1;
+            e.preventDefault();
+        } else if (e.key === 'Enter') {
+            if (selectedPauseOption === 0) {
+                // 게임 재개
+                resumeGame();
+            } else if (selectedPauseOption === 1) {
+                // 시작 화면으로 돌아가기
+                currentGameState = GAME_STATE.START_SCREEN;
+            }
+            e.preventDefault();
+        }
+    }
     
-    // 나머지 키 이벤트 처리 (이전 코드와 동일)
+    // ESC 키 이벤트 처리 (이전과 동일)
     if (e.key === 'Escape') {
         if (currentGameState === GAME_STATE.PLAYING) {
             pauseGame();
@@ -192,14 +215,7 @@ document.addEventListener('keydown', (e) => {
         }
         e.preventDefault();
     }
-    // 일시정지 상태에서 키 처리
-    else if (currentGameState === GAME_STATE.PAUSED) {
-        if (e.key === 'Enter') {
-            resumeGame();
-            e.preventDefault();
-        }
-    }
-    // 게임 오버 화면에서 키 처리
+    // 게임 오버 화면에서 키 처리 (이전과 동일)
     else if (currentGameState === GAME_STATE.GAME_OVER) {
         if (e.key === 'Enter') {
             restartGame();
@@ -207,7 +223,7 @@ document.addEventListener('keydown', (e) => {
         }
     }
     
-    // 스크롤 방지
+    // 스크롤 방지 (이전과 동일)
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Enter', 'Escape'].includes(e.key)) {
         e.preventDefault();
     }
@@ -226,10 +242,12 @@ window.addEventListener('blur', () => {
 });
 
 // 일시정지 기능 추가
+// 게임이 일시 정지될 때 selectedPauseOption 초기화 추가
 function pauseGame() {
     if (currentGameState === GAME_STATE.PLAYING) {
         previousGameState = currentGameState;
         currentGameState = GAME_STATE.PAUSED;
+        selectedPauseOption = 0; // 일시정지 시 첫 번째 옵션 선택
     }
 }
 
@@ -240,7 +258,7 @@ function resumeGame() {
     }
 }
 
-// 일시정지 화면 그리기 함수 추가
+// 일시정지 화면 그리기 함수 업데이트
 function drawPauseScreen() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -248,11 +266,37 @@ function drawPauseScreen() {
     ctx.fillStyle = '#66fcf1';
     ctx.font = '48px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2 - 80);
     
-    ctx.fillStyle = '#FFFFFF';
+    // 메뉴 옵션 그리기
     ctx.font = '24px Arial';
-    ctx.fillText('ESC or ENTER', canvas.width / 2, canvas.height / 2 + 50);
+    
+    // Resume Game 옵션
+    if (selectedPauseOption === 0) {
+        ctx.fillStyle = '#FFFF00'; // 선택된 항목 색상
+        // 화살표 인디케이터 그리기
+        drawArrow(canvas.width / 2 - 100, canvas.height / 2 - 8);
+    } else {
+        ctx.fillStyle = '#FFFFFF';
+    }
+    ctx.fillText('RESUME', canvas.width / 2, canvas.height / 2);
+    
+    // Back to Main Menu 옵션
+    if (selectedPauseOption === 1) {
+        ctx.fillStyle = '#FFFF00'; // 선택된 항목 색상
+        // 화살표 인디케이터 그리기
+        drawArrow(canvas.width / 2 - 100, canvas.height / 2 + 42);
+    } else {
+        ctx.fillStyle = '#FFFFFF';
+    }
+    ctx.fillText('MAIN MENU', canvas.width / 2, canvas.height / 2 + 50);
+    
+    // 안내 메시지
+    /*
+    ctx.fillStyle = '#AAAAAA';
+    ctx.font = '16px Arial';
+    ctx.fillText('방향키로 선택하고 Enter를 눌러 확인하세요', canvas.width / 2, canvas.height / 2 + 100);
+    */
 }
 
 // 로딩 화면 그리기 함수
@@ -264,7 +308,7 @@ function drawLoadingScreen() {
     ctx.fillStyle = '#66fcf1';
     ctx.font = '36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('로딩 중...', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.fillText('LOADING...', canvas.width / 2, canvas.height / 2 - 20);
     
     // 로딩 바 배경
     ctx.fillStyle = '#333';
@@ -414,7 +458,29 @@ function drawStartScreen() {
     ctx.fillStyle = '#55AAFF';
     ctx.font = '48px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('뱀파이어 서바이벌', canvas.width / 2, canvas.height / 3);
+    ctx.fillText('뱀파이어 서바이벌', canvas.width / 2, canvas.height / 3 + 50);
+    
+    // Draw selected character preview
+    const previewSize = player.size * 3;
+    const previewX = canvas.width / 2;
+    const previewY = canvas.height / 3 + 70;
+    
+    // Draw character preview
+    if (player.image && player.image.complete) {
+        ctx.drawImage(
+            player.image,
+            previewX - previewSize * 2,
+            previewY - previewSize * 2 - 150,
+            previewSize * 4,
+            previewSize * 4
+        );
+    } else {
+        // Fallback if image not loaded
+        ctx.fillStyle = '#AAAAAA';
+        ctx.beginPath();
+        ctx.arc(previewX, previewY, previewSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
     
     // Menu options
     ctx.font = '24px Arial';
@@ -423,26 +489,29 @@ function drawStartScreen() {
     if (selectedMenuOption === 0) {
         ctx.fillStyle = '#FFFF00'; // Highlighted color
         // Draw arrow indicator
-        drawArrow(canvas.width / 2 - 80, canvas.height / 2 - 8);
+        drawArrow(canvas.width / 2 - 80, canvas.height / 2 + 42);
     } else {
         ctx.fillStyle = '#FFFFFF';
     }
-    ctx.fillText('시작', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('시작', canvas.width / 2, canvas.height / 2 + 50);
     
     // Settings option
     if (selectedMenuOption === 1) {
         ctx.fillStyle = '#FFFF00'; // Highlighted color
         // Draw arrow indicator
-        drawArrow(canvas.width / 2 - 80, canvas.height / 2 + 42);
+        drawArrow(canvas.width / 2 - 80, canvas.height / 2 + 92);
     } else {
         ctx.fillStyle = '#FFFFFF';
     }
-    ctx.fillText('설정', canvas.width / 2, canvas.height / 2 + 50);
+    ctx.fillText('설정', canvas.width / 2, canvas.height / 2 + 100);
     
     // Instructions
     ctx.fillStyle = '#AAAAAA';
     ctx.font = '16px Arial';
-    ctx.fillText('방향키로 선택하고 Enter를 눌러 확인하세요', canvas.width / 2, canvas.height * 3/4);
+    //ctx.fillText('좌우 방향키로 캐릭터를 선택하세요', canvas.width / 2, canvas.height * 3/4 + 20);
+    ctx.fillText('방향키로 조작', canvas.width / 2, canvas.height * 3/4 + 50);
+    ctx.fillText('Enter로 선택', canvas.width / 2, canvas.height * 3/4 + 80);
+    //ctx.fillText('ESC: 취소', canvas.width / 2, canvas.height * 3/4 + 80);
 }
 
 // 설정 화면 그리기 함수 수정 - 색상 선택에서 캐릭터 선택으로 변경
@@ -498,8 +567,8 @@ function drawSettingsScreen() {
     // 안내 메시지
     ctx.fillStyle = '#AAAAAA';
     ctx.font = '16px Arial';
-    ctx.fillText('좌우 방향키로 캐릭터를 선택하고 Enter를 눌러 저장하세요', canvas.width / 2, canvas.height * 3/4 + 20);
-    ctx.fillText('Enter 또는 Escape를 눌러 메인 메뉴로 돌아가세요', canvas.width / 2, canvas.height * 3/4 + 50);
+    ctx.fillText('Enter를 눌러 캐릭터 선택', canvas.width / 2, canvas.height * 3/4 + 20);
+    ctx.fillText('ESC를 눌러 취소', canvas.width / 2, canvas.height * 3/4 + 50);
 }
 
 // Update Game State
