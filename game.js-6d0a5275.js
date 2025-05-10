@@ -71,6 +71,7 @@ const playerImages = [
 
 // 선택된 캐릭터 인덱스 (0, 1, 2 중 하나)
 let currentCharacterIndex = 0;
+let previousCharacterIndex = 0;
 
 // 이미지 리소스 로딩 - 3개의 캐릭터 이미지 로드
 function loadCharacterImages() {
@@ -181,8 +182,16 @@ document.addEventListener('keydown', (e) => {
             player.characterType = currentCharacterIndex + 1; // 1, 2, 3 값 저장
             player.image = playerImages[currentCharacterIndex].image;
             e.preventDefault();
-        } else if (e.key === 'Enter' || e.key === 'Escape') {
-            // 시작 화면으로 돌아가기
+        } else if (e.key === 'Enter') {
+            // 캐릭터 바뀐 채 시작 화면으로 돌아가기
+            previousCharacterIndex = currentCharacterIndex;
+            currentGameState = GAME_STATE.START_SCREEN;
+            e.preventDefault();
+        } else if (e.key === 'Escape') {
+            // 캐릭터 바뀌지 않은 채 시작 화면으로 돌아가기
+            currentCharacterIndex = previousCharacterIndex;
+            player.characterType = previousCharacterIndex + 1;
+            player.image = playerImages[previousCharacterIndex].image;
             currentGameState = GAME_STATE.START_SCREEN;
             e.preventDefault();
         }
