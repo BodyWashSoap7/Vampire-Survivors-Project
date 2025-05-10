@@ -110,30 +110,30 @@ let previousCharacterIndex = 0;
 // 이미지 리소스 로딩 - 각 캐릭터의 방향별, 상태별 이미지 로드
 function loadCharacterImages() {
     // 캐릭터 1
-    playerImages[0].right.standing.src = 'player1_right.png';
-    playerImages[0].left.standing.src = 'player1_left.png';
+    playerImages[0].right.standing.src = './img/player1_right.png';
+    playerImages[0].left.standing.src = './img/player1_left.png';
     
     for (let i = 0; i < 4; i++) {
-        playerImages[0].right.walking[i].src = `player1_right_walk${i+1}.png`;
-        playerImages[0].left.walking[i].src = `player1_left_walk${i+1}.png`;
+        playerImages[0].right.walking[i].src = `./img/player1_right_walk${i+1}.png`;
+        playerImages[0].left.walking[i].src = `./img/player1_left_walk${i+1}.png`;
     }
     
     // 캐릭터 2
-    playerImages[1].right.standing.src = 'player2_right.png';
-    playerImages[1].left.standing.src = 'player2_left.png';
+    playerImages[1].right.standing.src = './img/player2_right.png';
+    playerImages[1].left.standing.src = './img/player2_left.png';
     
     for (let i = 0; i < 4; i++) {
-        playerImages[1].right.walking[i].src = `player2_right_walk${i+1}.png`;
-        playerImages[1].left.walking[i].src = `player2_left_walk${i+1}.png`;
+        playerImages[1].right.walking[i].src = `./img/player2_right_walk${i+1}.png`;
+        playerImages[1].left.walking[i].src = `./img/player2_left_walk${i+1}.png`;
     }
     
     // 캐릭터 3
-    playerImages[2].right.standing.src = 'player3_right.png';
-    playerImages[2].left.standing.src = 'player3_left.png';
+    playerImages[2].right.standing.src = './img/player3_right.png';
+    playerImages[2].left.standing.src = './img/player3_left.png';
     
     for (let i = 0; i < 4; i++) {
-        playerImages[2].right.walking[i].src = `player3_right_walk${i+1}.png`;
-        playerImages[2].left.walking[i].src = `player3_left_walk${i+1}.png`;
+        playerImages[2].right.walking[i].src = `./img/player3_right_walk${i+1}.png`;
+        playerImages[2].left.walking[i].src = `./img/player3_left_walk${i+1}.png`;
     }
     
     // 첫 번째 캐릭터의 기본 이미지(오른쪽 정지 상태)로 기본 설정
@@ -1374,6 +1374,7 @@ class Jewel {
     checkLevelUp() {
         if (player.exp >= player.nextLevelExp) {
             player.level += 1;
+            player.exp = player.exp - player.nextLevelExp;
             player.prevLevelExp = player.nextLevelExp;
             player.nextLevelExp = Math.floor(player.nextLevelExp * 1.5);
             player.health = player.maxHealth; // Restore health on level up
