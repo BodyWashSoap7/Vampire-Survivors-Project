@@ -39,10 +39,6 @@ let chunksLoaded = false; // 청크 로딩 완료 여부
 // Start menu options
 let selectedMenuOption = 0; // 0 = Start Game, 1 = Settings
 
-// 시작 화면용 애니메이션 변수
-let menuAnimationFrame = 0;
-let lastMenuAnimationTime = 0;
-
 // Pause menu options
 let selectedPauseOption = 0; // 0 = Resume Game, 1 = To the Start Menu
 let selectedConfirmOption = 0; // 0 = 예, 1 = 아니오
@@ -63,94 +59,34 @@ const player = {
     prevLevelExp: 0,
     weapons: [],
     characterType: 1, // 기본 캐릭터 (1, 2, 3 중 하나)
-    image: null,     // 이미지 객체는 선택에 따라 할당됨
-    direction: 'right', // 기본 방향 (right 또는 left)
-    isMoving: false,   // 움직임 상태
-    animationFrame: 0, // 현재 애니메이션 프레임
-    lastAnimationTime: 0 // 마지막 애니메이션 업데이트 시간
+    image: null     // 이미지 객체는 선택에 따라 할당됨
 };
 
-// 플레이어 캐릭터 이미지 배열 - 각 캐릭터마다 방향별 이미지 추가
+// 플레이어 캐릭터 이미지 배열 생성 (색상 배열 대체)
 const playerImages = [
-    { 
-        name: '캐릭터 1', 
-        right: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        },
-        left: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        }
-    },
-    { 
-        name: '캐릭터 2', 
-        right: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        },
-        left: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        }
-    },
-    { 
-        name: '캐릭터 3', 
-        right: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        },
-        left: {
-            standing: new Image(),
-            idle: [new Image(), new Image()], // 대기 상태 애니메이션
-            walking: [new Image(), new Image(), new Image(), new Image()]
-        }
-    }
+    { name: '캐릭터 1', image: new Image() },
+    { name: '캐릭터 2', image: new Image() },
+    { name: '캐릭터 3', image: new Image() }
 ];
 
 // 선택된 캐릭터 인덱스 (0, 1, 2 중 하나)
 let currentCharacterIndex = 0;
-let previousCharacterIndex = 0;
 
-// 이미지 리소스 로딩 - 각 캐릭터의 방향별, 상태별 이미지 로드
+// 이미지 리소스 로딩 - 3개의 캐릭터 이미지 로드
 function loadCharacterImages() {
-    // 캐릭터 1
-    playerImages[0].right.standing.src = './img/player1_right.png';
-    playerImages[0].left.standing.src = './img/player1_left.png';
+    playerImages[0].image.src = 'player1.png';
+    playerImages[1].image.src = 'player2.png';
+    playerImages[2].image.src = 'player3.png';
     
-    for (let i = 0; i < 4; i++) {
-        playerImages[0].right.walking[i].src = `./img/player1_right_walk${i+1}.png`;
-        playerImages[0].left.walking[i].src = `./img/player1_left_walk${i+1}.png`;
-    }
-    
-    // 캐릭터 2
-    playerImages[1].right.standing.src = './img/player2_right.png';
-    playerImages[1].left.standing.src = './img/player2_left.png';
-    
-    for (let i = 0; i < 4; i++) {
-        playerImages[1].right.walking[i].src = `./img/player2_right_walk${i+1}.png`;
-        playerImages[1].left.walking[i].src = `./img/player2_left_walk${i+1}.png`;
-    }
-    
-    // 캐릭터 3
-    playerImages[2].right.standing.src = './img/player3_right.png';
-    playerImages[2].left.standing.src = './img/player3_left.png';
-    
-    for (let i = 0; i < 4; i++) {
-        playerImages[2].right.walking[i].src = `./img/player3_right_walk${i+1}.png`;
-        playerImages[2].left.walking[i].src = `./img/player3_left_walk${i+1}.png`;
-    }
-    
-    // 첫 번째 캐릭터의 기본 이미지(오른쪽 정지 상태)로 기본 설정
-    player.image = playerImages[0].right.standing;
+    // 첫 번째 캐릭터로 기본 설정
+    player.image = playerImages[0].image;
     
     // 이미지 로드 확인용 로그
-    console.log('캐릭터 이미지 로딩 시작...');
+    playerImages.forEach((character, index) => {
+        character.image.onload = function() {
+            console.log(`캐릭터 ${index + 1} 이미지 로드 완료`);
+        };
+    });
 }
 
 // 게임 초기화 시 이미지 로딩 호출
@@ -245,16 +181,8 @@ document.addEventListener('keydown', (e) => {
             player.characterType = currentCharacterIndex + 1; // 1, 2, 3 값 저장
             player.image = playerImages[currentCharacterIndex].image;
             e.preventDefault();
-        } else if (e.key === 'Enter') {
-            // 캐릭터 바뀐 채 시작 화면으로 돌아가기
-            previousCharacterIndex = currentCharacterIndex;
-            currentGameState = GAME_STATE.START_SCREEN;
-            e.preventDefault();
-        } else if (e.key === 'Escape') {
-            // 캐릭터 바뀌지 않은 채 시작 화면으로 돌아가기
-            currentCharacterIndex = previousCharacterIndex;
-            player.characterType = previousCharacterIndex + 1;
-            player.image = playerImages[previousCharacterIndex].image;
+        } else if (e.key === 'Enter' || e.key === 'Escape') {
+            // 시작 화면으로 돌아가기
             currentGameState = GAME_STATE.START_SCREEN;
             e.preventDefault();
         }
@@ -280,7 +208,6 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         }
     }
-    
     // 확인 대화상자 네비게이션 추가
     else if (currentGameState === GAME_STATE.CONFIRM_DIALOG) {
         if (e.key === 'ArrowLeft') {
@@ -300,9 +227,12 @@ document.addEventListener('keydown', (e) => {
                 }
             }
             e.preventDefault();
+        } else if (e.key === 'Escape') {
+            // ESC 누르면 일시정지 화면으로 돌아가기
+            currentGameState = GAME_STATE.PAUSED;
+            e.preventDefault();
         }
     }
-    
     // ESC 키 이벤트 처리 (이전과 동일)
     if (e.key === 'Escape') {
         if (currentGameState === GAME_STATE.PLAYING) {
@@ -311,8 +241,6 @@ document.addEventListener('keydown', (e) => {
             resumeGame();
         } else if (currentGameState === GAME_STATE.SETTINGS) {
             currentGameState = GAME_STATE.START_SCREEN;
-        } else if (currentGameState === GAME_STATE.CONFIRM_DIALOG) {
-            currentGameState = GAME_STATE.PAUSED;
         }
         e.preventDefault();
     }
@@ -621,11 +549,10 @@ function drawStartScreen() {
     const previewX = canvas.width / 2;
     const previewY = canvas.height / 3 + 70;
     
-    // Draw character preview - 오른쪽 방향 기본 이미지 사용
-    const previewImage = playerImages[currentCharacterIndex].right.standing;
-    if (previewImage && previewImage.complete) {
+    // Draw character preview
+    if (player.image && player.image.complete) {
         ctx.drawImage(
-            previewImage,
+            player.image,
             previewX - previewSize * 2,
             previewY - previewSize * 2 - 150,
             previewSize * 4,
@@ -665,11 +592,13 @@ function drawStartScreen() {
     // Instructions
     ctx.fillStyle = '#AAAAAA';
     ctx.font = '16px Arial';
+    //ctx.fillText('좌우 방향키로 캐릭터를 선택하세요', canvas.width / 2, canvas.height * 3/4 + 20);
     ctx.fillText('방향키로 조작', canvas.width / 2, canvas.height * 3/4 + 50);
     ctx.fillText('Enter로 선택', canvas.width / 2, canvas.height * 3/4 + 80);
+    //ctx.fillText('ESC: 취소', canvas.width / 2, canvas.height * 3/4 + 80);
 }
 
-// 설정 화면 그리기 함수
+// 설정 화면 그리기 함수 수정 - 색상 선택에서 캐릭터 선택으로 변경
 function drawSettingsScreen() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -695,16 +624,15 @@ function drawSettingsScreen() {
     ctx.fillText('◀', canvas.width / 2 - 120, canvas.height / 2 + 70);
     ctx.fillText('▶', canvas.width / 2 + 120, canvas.height / 2 + 70);
     
-    // 캐릭터 이미지 미리보기 - 기본 상태 이미지 사용
+    // 캐릭터 이미지 미리보기
     const previewSize = player.size * 4;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2 + 50;
     
-    // 현재 선택된 캐릭터 기본 이미지 그리기(오른쪽 방향 사용)
-    const previewImage = playerImages[currentCharacterIndex].right.standing;
-    if (previewImage && previewImage.complete) {
+    // 현재 선택된 캐릭터 이미지 그리기
+    if (playerImages[currentCharacterIndex].image.complete) {
         ctx.drawImage(
-            previewImage,
+            playerImages[currentCharacterIndex].image,
             centerX - previewSize,
             centerY - previewSize,
             previewSize * 2,
@@ -734,43 +662,20 @@ let lastLevel = player.level;
 let lastScore = score;
 let lastExp = player.exp;
 
-// update 함수를 수정 - 플레이어 방향과 애니메이션 상태 업데이트
+// update 함수를 수정합니다 - 플레이어 움직임과 상관없이 항상 자동 조준 업데이트
 function update() {
-    // 이전 움직임 상태 저장
-    const wasMoving = player.isMoving;
-    
-    // 기본 상태는 정지
-    player.isMoving = false;
-    
     // Move Player
     let playerMoved = false;
-    if (keys['ArrowUp']) { player.y -= player.speed; playerMoved = true; player.isMoving = true; }
-    if (keys['ArrowDown']) { player.y += player.speed; playerMoved = true; player.isMoving = true; }
-    
-    // 좌우 이동시 방향 설정
-    if (keys['ArrowLeft']) { 
-        player.x -= player.speed; 
-        playerMoved = true; 
-        player.direction = 'left';
-        player.isMoving = true;
-    }
-    if (keys['ArrowRight']) { 
-        player.x += player.speed; 
-        playerMoved = true; 
-        player.direction = 'right';
-        player.isMoving = true;
-    }
-    
-    // 애니메이션 프레임 업데이트
-    updatePlayerAnimation();
+    if (keys['ArrowUp']) { player.y -= player.speed; playerMoved = true; }
+    if (keys['ArrowDown']) { player.y += player.speed; playerMoved = true; }
+    if (keys['ArrowLeft']) { player.x -= player.speed; playerMoved = true; }
+    if (keys['ArrowRight']) { player.x += player.speed; playerMoved = true; }
     
     // 플레이어가 움직였을 때만 청크를 생성
     if (playerMoved) {
         // Generate chunks around the player
         generateChunksAroundPlayer();
     }
-    
-    // 이하 기존 update 함수 내용 동일
     // 적 스폰 로직 실행
     spawnEnemyAroundPlayer();
     
@@ -817,6 +722,8 @@ function update() {
             if (detectCollision(player, enemy)) {
                 player.health -= enemy.attackStrength;
                 enemies.splice(i, 1);
+                
+                // Player health changed, update will happen at end of function
             }
         }
     }
@@ -858,31 +765,6 @@ function update() {
     }
 }
 
-// 플레이어 애니메이션 업데이트 함수
-function updatePlayerAnimation() {
-    const now = Date.now();
-    const ANIMATION_SPEED = 150; // 프레임 변경 간격 (밀리초)
-    
-    if (player.isMoving) {
-        // 움직이는 경우, 애니메이션 프레임 업데이트
-        if (now - player.lastAnimationTime > ANIMATION_SPEED) {
-            player.animationFrame = (player.animationFrame + 1) % 4; // 4개 프레임 순환
-            player.lastAnimationTime = now;
-        }
-    } else {
-        // 정지 상태면 첫 프레임으로 리셋
-        player.animationFrame = 0;
-    }
-    
-    // 현재 상태에 맞는 이미지 설정
-    const characterIndex = currentCharacterIndex;
-    if (player.isMoving) {
-        player.image = playerImages[characterIndex][player.direction].walking[player.animationFrame];
-    } else {
-        player.image = playerImages[characterIndex][player.direction].standing;
-    }
-}
-
 // Draw Game Objects
 function draw() {
     // Clear Canvas
@@ -915,7 +797,7 @@ function draw() {
         bullet.draw(offsetX, offsetY);
     });
 
-    // 플레이어 그리기
+    // 플레이어 그리기 (색상 적용 대신 선택된 캐릭터 이미지 사용)
     if (player.image && player.image.complete) {
         // 이미지가 로드된 경우 이미지 그리기
         const playerSize = player.size * 2; // 이미지 크기 조정
@@ -1142,7 +1024,7 @@ function fireWeapon() {
     }
 }
 
-// resetGame 함수
+// resetGame 함수 수정 - 색상 대신 캐릭터 타입 유지
 function resetGame() {
     player.x = 0;
     player.y = 0;
@@ -1152,12 +1034,7 @@ function resetGame() {
     player.nextLevelExp = 100;
     player.prevLevelExp = 0;
     player.weapons = [new BasicWeapon()];
-    // characterType, image는 그대로 유지
-    // 방향과 애니메이션 상태 초기화
-    player.direction = 'right';
-    player.isMoving = false;
-    player.animationFrame = 0;
-    
+    // characterType과 image는 그대로 유지 (캐릭터 선택 유지)
     bullets = [];
     enemies = [];
     jewels = [];
@@ -1170,6 +1047,8 @@ function resetGame() {
     levelElement.textContent = `Level: ${player.level}`;
     scoreElement.textContent = `Score: ${score}`;
     expElement.textContent = `EXP: ${player.exp} / ${player.nextLevelExp}`;
+    
+    // 게임 상태 변경은 호출하는 함수에서 처리
 }
 
 function restartGame() {
@@ -1384,7 +1263,6 @@ class Jewel {
     checkLevelUp() {
         if (player.exp >= player.nextLevelExp) {
             player.level += 1;
-            player.exp = player.exp - player.nextLevelExp;
             player.prevLevelExp = player.nextLevelExp;
             player.nextLevelExp = Math.floor(player.nextLevelExp * 1.5);
             player.health = player.maxHealth; // Restore health on level up
