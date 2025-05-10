@@ -227,13 +227,10 @@ document.addEventListener('keydown', (e) => {
                 }
             }
             e.preventDefault();
-        } else if (e.key === 'Escape') {
-            // ESC 누르면 일시정지 화면으로 돌아가기
-            currentGameState = GAME_STATE.PAUSED;
-            e.preventDefault();
         }
     }
-    // ESC 키 이벤트 처리 (이전과 동일)
+
+    // ESC 키 이벤트 처리
     if (e.key === 'Escape') {
         if (currentGameState === GAME_STATE.PLAYING) {
             pauseGame();
@@ -241,6 +238,8 @@ document.addEventListener('keydown', (e) => {
             resumeGame();
         } else if (currentGameState === GAME_STATE.SETTINGS) {
             currentGameState = GAME_STATE.START_SCREEN;
+        } else if (currentGameState === GAME_STATE.CONFIRM_DIALOG) {
+            currentGameState = GAME_STATE.PAUSED;
         }
         e.preventDefault();
     }
