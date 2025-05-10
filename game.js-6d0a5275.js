@@ -39,6 +39,10 @@ let chunksLoaded = false; // 청크 로딩 완료 여부
 // Start menu options
 let selectedMenuOption = 0; // 0 = Start Game, 1 = Settings
 
+// 시작 화면용 애니메이션 변수
+let menuAnimationFrame = 0;
+let lastMenuAnimationTime = 0;
+
 // Pause menu options
 let selectedPauseOption = 0; // 0 = Resume Game, 1 = To the Start Menu
 let selectedConfirmOption = 0; // 0 = 예, 1 = 아니오
@@ -72,10 +76,12 @@ const playerImages = [
         name: '캐릭터 1', 
         right: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         },
         left: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         }
     },
@@ -83,10 +89,12 @@ const playerImages = [
         name: '캐릭터 2', 
         right: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         },
         left: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         }
     },
@@ -94,10 +102,12 @@ const playerImages = [
         name: '캐릭터 3', 
         right: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         },
         left: {
             standing: new Image(),
+            idle: [new Image(), new Image()], // 대기 상태 애니메이션
             walking: [new Image(), new Image(), new Image(), new Image()]
         }
     }
